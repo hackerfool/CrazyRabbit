@@ -16,6 +16,7 @@
 %% redis API
 -export([q/1]).
 -export([q/2]).
+-export([add_url_to_wait/1]).
 
 %% gen_server 
 -export([init/1]).
@@ -36,6 +37,8 @@ q(Command) ->
 q(Command, Timeout) ->
 	gen_server:call({global, ?MODULE}, {eredis_q, Command, Timeout}).
 
+add_url_to_wait(Url) ->
+	gen_server:cast({global, ?MODULE}, {add_url_to_wait, Url}).
 
 %%
 init([Args]) ->
@@ -49,16 +52,20 @@ init([Args]) ->
 	error_logger:info_msg("Connection redis is running, Args:~p ::::::~n",[Args]),
 	{ok, #redis_server_statue{ eredisHandle = EredisHandle }}.
 
-handle_call({eredis_q, Command}, _From, Status) ->
-	Result = eredis:q(Status#redis_server_statue.eredisHandle, Command),
-	{reply, Result, Status};
+handle_call({eredis_q, Command}, _From, State) ->
+	Result = eredis:q(State#redis_server_statue.eredisHandle, Command),
+	{reply, Result, State};
 
-handle_call({eredis_q, Command, Timeout}, _From, Status) ->
-	Result = ereids:q(Status#redis_server_statue.eredisHandle, Command, Timeout),
-	{reply, Result, Status};
+handle_call({eredis_q, Command, Timeout}, _From, State) ->
+	Result = ereids:q(State#redis_server_statue.eredisHandle, Command, Timeout),
+	{reply, Result, State};
 
 handle_call(_Request, _From , State) ->
 	{reply, bad_request, State}.
+
+handle_cast({add_url_to_wait, Url}, State) ->
+	eredis:q(State#redis_server_statue.eredisHandle, ["HMSET", "wait:" ++ Url, "name", Url, "body", "none"]),
+	{noreply, State};
 
 handle_cast(_Request, State) ->
 	{noreply, State}.

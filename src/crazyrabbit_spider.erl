@@ -27,7 +27,7 @@ parse_url([], Urls) ->
 parse_url(Body,Urls) ->
 	% error_logger:info_msg("parse_url2 Urls:~w~n ::::::",[Urls]),
 	case Body of
-		"<a href=" ++ Other ->
+		"<a href=\"" ++ Other ->
 			{Url, Body2} = parse_get_body_url(Other, []),
 			parse_url(Body2, [Url | Urls]);
 		[_ | Other] ->
@@ -36,8 +36,11 @@ parse_url(Body,Urls) ->
 
 parse_get_body_url(Body, Url) ->
 	case Body of
-		">" ++ Other ->
+		"\"" ++ Other ->
 			{lists:reverse(Url), Other};
 		[Word | Body2] ->
 			parse_get_body_url(Body2, [Word | Url])
 	end.
+
+seed_url_to_redis(Url) ->
+	crazyrabbit_redis:add_url_to_wait(Url).
